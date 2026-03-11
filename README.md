@@ -1,7 +1,7 @@
 [![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/yylego/gormcngen/release.yml?branch=main&label=BUILD)](https://github.com/yylego/gormcngen/actions/workflows/release.yml?query=branch%3Amain)
 [![GoDoc](https://pkg.go.dev/badge/github.com/yylego/gormcngen)](https://pkg.go.dev/github.com/yylego/gormcngen)
 [![Coverage Status](https://img.shields.io/coveralls/github/yylego/gormcngen/main.svg)](https://coveralls.io/github/yylego/gormcngen?branch=main)
-[![Supported Go Versions](https://img.shields.io/badge/Go-1.24+-lightgrey.svg)](https://go.dev/)
+[![Supported Go Versions](https://img.shields.io/badge/Go-1.25+-lightgrey.svg)](https://go.dev/)
 [![GitHub Release](https://img.shields.io/github/release/yylego/gormcngen.svg)](https://github.com/yylego/gormcngen/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/yylego/gormcngen)](https://goreportcard.com/report/github.com/yylego/gormcngen)
 
