@@ -12,8 +12,10 @@ package gormcngen
 import (
 	"go/ast"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -30,7 +32,6 @@ import (
 	"github.com/yylego/syntaxgo/syntaxgo_search"
 	"github.com/yylego/zaplog"
 	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
 )
 
 // CodeGenerationConfig defines the configuration used in intelligent code generation
@@ -136,7 +137,7 @@ func (cfg *Configs) WithGeneratedFromPos(generatedFromPos string) *Configs {
 // WithGoBuildDirective sets the go:build directive at the top of generated files
 // Pass non-blank string to add "//go:build {directive}" line at file top
 // Use "!gormcngen_generate" to skip compilation during code generation
-// Run "go test -tags=gormcngen_generate" to generate when model changes
+// Run "go test -tags=gormcngen_generate" to regenerate once the models change
 //
 // WithGoBuildDirective 设置生成文件顶部的 go:build 指令
 // 传入非空字符串在文件顶部添加 "//go:build {directive}" 行
@@ -195,7 +196,7 @@ func (cfg *Configs) Gen() {
 
 	// Iterate through each schema configuration to generate the corresponding code. // 遍历每个 schema 配置，生成相应的代码
 	for _, schemaConfig := range cfg.schemas {
-		// Generate code for the current schema. // 生成当前 schema 的代码
+		// Generate code of the current schema. // 生成当前 schema 的代码
 		output := schemaConfig.Gen()
 
 		// Handle method-related code logic. // 处理与方法相关的代码逻辑
@@ -211,7 +212,7 @@ func (cfg *Configs) Gen() {
 				// Locate the AST definition of the method. // 查找方法的 AST 定义
 				methodTypeDeclaration, ok := syntaxgo_search.FindFunctionByReceiverAndName(astFile, schemaConfig.sch.Name, schemaConfig.methodName)
 				if ok {
-					// If the method exists, prepare for updating its code block. // 如果方法已存在，准备更新代码块
+					// If the method exists, prepare to update its code block. // 如果方法已存在，准备更新代码块
 					editingElements = append(editingElements, &elementType{
 						sourcePath:     path,
 						astNode:        methodTypeDeclaration,
@@ -222,7 +223,7 @@ func (cfg *Configs) Gen() {
 				} else {
 					// 当函数不存在时，是否生成它。前面的当函数已存在时，就必须更新它的内容，避免剩个不维护的函数，被其他逻辑误用
 					if schemaConfig.options.isGenNewSimpleColumns {
-						// If the method does not exist, prepare for adding a new code block. // 如果方法不存在，准备添加新代码块
+						// If the method does not exist, prepare to add a new code block. // 如果方法不存在，准备添加新代码块
 						editingElements = append(editingElements, &elementType{
 							sourcePath:     path,
 							astNode:        syntaxgo_astnode.NewNode(token.Pos(newCodeSequence.Add(1)), 0),
@@ -240,7 +241,7 @@ func (cfg *Configs) Gen() {
 				// Locate the AST definition of the method. // 查找方法的 AST 定义
 				methodTypeDeclaration, ok := syntaxgo_search.FindFunctionByReceiverAndName(astFile, schemaConfig.sch.Name, schemaConfig.methodNameTableColumns)
 				if ok {
-					// If the method exists, prepare for updating its code block. // 如果方法已存在，准备更新代码块
+					// If the method exists, prepare to update its code block. // 如果方法已存在，准备更新代码块
 					editingElements = append(editingElements, &elementType{
 						sourcePath:     path,
 						astNode:        methodTypeDeclaration,
@@ -249,7 +250,7 @@ func (cfg *Configs) Gen() {
 						pkgImports:     output.pkgImports,
 					})
 				} else {
-					// If the method does not exist, prepare for adding a new code block. // 如果方法不存在，准备添加新代码块
+					// If the method does not exist, prepare to add a new code block. // 如果方法不存在，准备添加新代码块
 					editingElements = append(editingElements, &elementType{
 						sourcePath:     path,
 						astNode:        syntaxgo_astnode.NewNode(token.Pos(newCodeSequence.Add(1)), 0),
@@ -290,7 +291,7 @@ func (cfg *Configs) Gen() {
 				}
 			}
 			if ok {
-				// If the struct exists, prepare for updating its code block. // 如果结构体已存在，准备更新代码块
+				// If the struct exists, prepare to update its code block. // 如果结构体已存在，准备更新代码块
 				editingElements = append(editingElements, &elementType{
 					sourcePath:     path,
 					astNode:        structTypeDeclaration,
@@ -299,7 +300,7 @@ func (cfg *Configs) Gen() {
 					pkgImports:     output.pkgImports,
 				})
 			} else {
-				// If the struct does not exist, prepare for adding a new code block. // 如果结构体不存在，准备添加新代码块
+				// If the struct does not exist, prepare to add a new code block. // 如果结构体不存在，准备添加新代码块
 				editingElements = append(editingElements, &elementType{
 					sourcePath:     path,
 					astNode:        syntaxgo_astnode.NewNode(token.Pos(newCodeSequence.Add(1)), 0),
@@ -332,7 +333,7 @@ func (cfg *Configs) Gen() {
 
 	var path2codeMap = map[string]*sourceAndImportsTuple{} // 文件路径与源代码映射
 
-	// Initialize the mapping for each file that requires editing. // 为每个需要编辑的文件初始化映射
+	// Initialize the mapping of each file that needs editing. // 为每个需要编辑的文件初始化映射
 	for _, elem := range editingElements {
 		if _, ok := path2codeMap[elem.sourcePath]; !ok {
 			path2codeMap[elem.sourcePath] = &sourceAndImportsTuple{
@@ -361,8 +362,8 @@ func (cfg *Configs) Gen() {
 	// Inject the required imports into the source code. // 将必要的导入包注入源代码
 	for _, tuple := range path2codeMap {
 		options := syntaxgo_ast.NewPackageImportOptions()
-		options.SetPkgPaths(maps.Keys(tuple.pkgImports))
-		options.SetInferredObject(gormcnm.ColumnOperationClass{})
+		options.AddPkgPaths(slices.Sorted(maps.Keys(tuple.pkgImports)))
+		options.AddInferredObject(gormcnm.ColumnOperationClass{})
 
 		tuple.sourceCode = options.InjectImports(tuple.sourceCode)
 	}

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -200,43 +201,30 @@ func (c *Config) Gen() *GenOutput {
 			continue
 		}
 
-		var columnGoTypeName string
-		// Get the base type when dealing with address types to check package
-		// 获取指针类型的底层类型来检查包
-		underlyingType := tern.BFF(field.FieldType.Kind() == reflect.Ptr, func() reflect.Type {
-			return field.FieldType.Elem()
-		}, func() reflect.Type {
-			return field.FieldType
-		})
-
-		if pkgPath := underlyingType.PkgPath(); pkgPath == c.sch.ModelType.PkgPath() { // 如果在同一个包里
-			// When types belong to same package, use simple name (Profile etc)
-			// 对于同包类型，使用简单名称（Profile 或 *Profile）
-			if field.FieldType.Kind() == reflect.Ptr {
-				columnGoTypeName = "*" + underlyingType.Name()
-			} else {
-				columnGoTypeName = field.FieldType.Name()
-			}
-		} else {
-			if pkgPath != "" {
-				pkgImports[pkgPath] = true
-			}
-			columnGoTypeName = field.FieldType.String() // 使用完整类型名
-		}
+		// Write the field type as Go source seen from the struct's own package, recording the imports it needs
+		// 以模型所在包的视角写出字段类型，并记下它需要的导入
+		columnGoTypeName := c.resolveTypeName(field.FieldType, pkgImports)
 		structFieldName, ok := c.resolveNewFieldName(field)
 		if !ok {
 			continue // 某些场景下不需要获得列名
 		}
 		structPtx.Println("\t", structFieldName, fmt.Sprintf("%s.ColumnName[%s]", pkgNameGormCnm, columnGoTypeName))
 
+		// Fields of a named embedded struct are reached through it, e.g. c.Contact.Name
+		// 具名嵌入结构体里的字段要经由它访问，如 c.Contact.Name
+		fieldAccess, viaIndirect := c.resolveFieldAccess(field)
 		if c.options.isGenFuncTableColumns {
 			must.Nice(c.options.columnsMethodRecvName)
 			must.True(c.options.columnsCheckFieldType)
-			valueColumnName := fmt.Sprintf(`%s.Cmn(%s.%s, "%s", decoration)`, pkgNameGormCnm, c.options.columnsMethodRecvName, field.Name, field.DBName)
+			valueColumnName := tern.BFF(viaIndirect, func() string {
+				return fmt.Sprintf(`%s.New[%s](decoration.DecorateColumnName("%s"))`, pkgNameGormCnm, columnGoTypeName, field.DBName)
+			}, func() string {
+				return fmt.Sprintf(`%s.Cmn(%s.%s, "%s", decoration)`, pkgNameGormCnm, c.options.columnsMethodRecvName, fieldAccess, field.DBName)
+			})
 			methodTableColumnsPtx.Println("\t\t", fmt.Sprintf("%s:%s,", structFieldName, valueColumnName))
 		} else {
-			valueColumnName := tern.BFF(c.options.columnsMethodRecvName != "" && c.options.columnsCheckFieldType, func() string {
-				return fmt.Sprintf(`%s.Cnm(%s.%s, "%s")`, pkgNameGormCnm, c.options.columnsMethodRecvName, field.Name, field.DBName)
+			valueColumnName := tern.BFF(c.options.columnsMethodRecvName != "" && c.options.columnsCheckFieldType && !viaIndirect, func() string {
+				return fmt.Sprintf(`%s.Cnm(%s.%s, "%s")`, pkgNameGormCnm, c.options.columnsMethodRecvName, fieldAccess, field.DBName)
 			}, func() string {
 				return `"` + field.DBName + `"`
 			})
@@ -285,10 +273,88 @@ func (c *Config) resolveNewFieldName(field *schema.Field) (string, bool) {
 			if c.options.excludeUntaggedFields {
 				return "", false
 			}
-			return field.Name, true
+			return strings.Join(field.EmbeddedBindNames, ""), true
 		}
 	}
-	return field.Name, true
+	// A named embedded struct adds its field name in front, e.g. ContactName; an anonymous one adds nothing
+	// 具名嵌入结构体会在前面加上它的字段名，如 ContactName；匿名嵌入不加
+	return strings.Join(field.EmbeddedBindNames, ""), true
+}
+
+// resolveFieldAccess gives the dotted path that generated code uses to reach a field, e.g. "Contact.Name" in a named embedded struct.
+// It also reports a path through a *T hop, since reading such a field panics when that hop holds no value.
+//
+// resolveFieldAccess 给出生成代码访问字段的路径，如具名嵌入结构体里的 "Contact.Name"。
+// 同时报告路径是否经过指针，因为指针为空时读取这样的字段会 panic。
+func (c *Config) resolveFieldAccess(field *schema.Field) (string, bool) {
+	typ := c.sch.ModelType
+	viaIndirect := false
+	for _, name := range field.BindNames[:len(field.BindNames)-1] {
+		structField, ok := typ.FieldByName(name)
+		must.True(ok)
+		typ = structField.Type
+		if typ.Kind() == reflect.Pointer {
+			viaIndirect = true
+			typ = typ.Elem()
+		}
+	}
+	return strings.Join(field.EmbeddedBindNames, "."), viaIndirect
+}
+
+// typeArgPattern matches a package-qualified name inside generic type args, which reflect writes with the whole import path, e.g. "gorm.io/datatypes.JSONType"
+// typeArgPattern 匹配泛型类型参数里带完整导入路径的类型名，reflect 会把它写成 "gorm.io/datatypes.JSONType" 这种形式
+var typeArgPattern = regexp.MustCompile(`([A-Za-z0-9_./-]+)\.([A-Za-z_][A-Za-z0-9_]*)`)
+
+// resolveTypeName writes a field type as Go source seen from the struct's own package.
+// Types from that package keep bare names; types from elsewhere get the package name and go into pkgImports.
+// Pointers, slices, arrays, maps and generic type args are handled at each nesting step.
+//
+// resolveTypeName 以模型所在包的视角，把字段类型写成 Go 源码。
+// 模型包内的类型不加包名；其他包的类型加上包名，并记入 pkgImports。
+// 指针、切片、数组、map 和泛型类型参数都逐层处理。
+func (c *Config) resolveTypeName(typ reflect.Type, pkgImports map[string]bool) string {
+	if typ.Name() == "" {
+		switch typ.Kind() {
+		case reflect.Pointer:
+			return "*" + c.resolveTypeName(typ.Elem(), pkgImports)
+		case reflect.Slice:
+			return "[]" + c.resolveTypeName(typ.Elem(), pkgImports)
+		case reflect.Array:
+			return fmt.Sprintf("[%d]%s", typ.Len(), c.resolveTypeName(typ.Elem(), pkgImports))
+		case reflect.Map:
+			return "map[" + c.resolveTypeName(typ.Key(), pkgImports) + "]" + c.resolveTypeName(typ.Elem(), pkgImports)
+		default:
+			return typ.String()
+		}
+	}
+	name := typ.Name()
+	if idx := strings.IndexByte(name, '['); idx >= 0 {
+		name = name[:idx] + c.resolveTypeArgs(name[idx:], pkgImports)
+	}
+	pkgPath := typ.PkgPath()
+	if pkgPath == "" || pkgPath == c.sch.ModelType.PkgPath() { // Predeclared types and types of the struct's own package // 预声明类型和模型包内的类型
+		return name
+	}
+	pkgImports[pkgPath] = true
+	pkgName, _, _ := strings.Cut(typ.String(), ".") // reflect puts the package name first // reflect 在开头写的是真实包名
+	return pkgName + "." + name
+}
+
+// resolveTypeArgs rewrites the import paths inside generic type args into package names, following resolveTypeName.
+// Here reflect gives just the import path, so the package name comes from its last element (minus a ".vN" / "/vN" version suffix).
+//
+// resolveTypeArgs 把泛型类型参数里的导入路径改写成包名，规则同 resolveTypeName。
+// 这里 reflect 只给出导入路径，因此包名取路径最后一段（去掉 ".vN" 或 "/vN" 版本后缀）。
+func (c *Config) resolveTypeArgs(args string, pkgImports map[string]bool) string {
+	return typeArgPattern.ReplaceAllStringFunc(args, func(match string) string {
+		groups := typeArgPattern.FindStringSubmatch(match)
+		pkgPath, name := groups[1], groups[2]
+		if pkgPath == c.sch.ModelType.PkgPath() {
+			return name
+		}
+		pkgImports[pkgPath] = true
+		return utils.PackageNameOfPath(pkgPath) + "." + name
+	})
 }
 
 // ShowSchemaEnglish Displays schema information including struct name, table name, and fields.

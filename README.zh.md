@@ -1,9 +1,13 @@
+<!-- TEMPLATE (ZH) BEGIN: BADGES -->
+
 [![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/yylego/gormcngen/release.yml?branch=main&label=BUILD)](https://github.com/yylego/gormcngen/actions/workflows/release.yml?query=branch%3Amain)
 [![GoDoc](https://pkg.go.dev/badge/github.com/yylego/gormcngen)](https://pkg.go.dev/github.com/yylego/gormcngen)
 [![Coverage Status](https://img.shields.io/coveralls/github/yylego/gormcngen/main.svg)](https://coveralls.io/github/yylego/gormcngen?branch=main)
-[![Supported Go Versions](https://img.shields.io/badge/Go-1.25+-lightgrey.svg)](https://go.dev/)
+[![Supported Go Versions](https://img.shields.io/badge/Go-1.27%2B-lightgrey.svg)](https://go.dev/)
 [![GitHub Release](https://img.shields.io/github/release/yylego/gormcngen.svg)](https://github.com/yylego/gormcngen/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/yylego/gormcngen)](https://goreportcard.com/report/github.com/yylego/gormcngen)
+
+<!-- TEMPLATE (ZH) CLOSE: BADGES -->
 
 # gormcngen
 
@@ -29,7 +33,7 @@
 
 [ENGLISH README](README.md)
 
-<!-- TEMPLATE (ZH) END: LANGUAGE NAVIGATION -->
+<!-- TEMPLATE (ZH) CLOSE: LANGUAGE NAVIGATION -->
 
 ---
 
@@ -224,8 +228,8 @@ advancedOptions := gormcngen.NewOptions().
     WithIsGenFuncTableColumns(true)            // 生成 TableColumns 函数
 
 // 批量处理多个模型
-allModels := []interface{}{&Account{}, &Product{}, &Item{}, &Client{}}
-configs := gormcngen.NewConfigs(allModels, options, "models_gen.go")
+models := []interface{}{&Account{}, &Product{}, &Item{}, &Client{}}
+configs := gormcngen.NewConfigs(models, options, "models_gen.go")
 configs.WithIsGenPreventEdit(true)  // 为生成的文件添加"请勿编辑"头部
 configs.WithGeneratedFromPos(gormcngen.GetGenPosFuncMark(0))  // 显示生成源位置 (默认: show)
 configs.WithGoBuildDirective(gormcngen.DirectiveSkipGenerate)  // 添加构建指令（推荐）
@@ -280,16 +284,28 @@ go test -run ^TestGenerate$ -tags=gormcngen_generate
 
 ## 高级功能
 
+### 支持的字段写法
+
+gormcngen 支持以下字段写法：
+
+| 结构体里的字段                                                               | 生成的列字段                                                                     |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 匿名嵌入，如 `gorm.Model`                                                    | 展开成 `ID`、`CreatedAt` 等，和直接写在结构体里一样                              |
+| 具名嵌入，如 `` Contact Contact `gorm:"embedded;embeddedPrefix:contact_"` `` | 字段名前加上外层名字：`ContactName` → `contact_name`，经由 `c.Contact.Name` 取值 |
+| 关联关系，如 `Profile Profile` / `Card *Card`                                | 跳过，数据在另一张表里                                                           |
+| 序列化存储，如 `` Tags []Tag `gorm:"serializer:json"` ``                     | 一列，Go 类型不变：`ColumnName[[]Tag]`                                           |
+| 泛型类型，如 `datatypes.JSONType[Meta]`                                      | `ColumnName[datatypes.JSONType[Meta]]`，并自动补上所需的导入                     |
+
 ### 多语言字段支持
 
-`cnm` 标签允许您定义中文别名作为字段名，这些别名将被生成为额外的结构体字段：
+`cnm` 标签允许您定义中文别名作为字段名，生成的结构体中用这些别名代替原来的 Go 字段名：
 
 ```go
 type Product struct {
     ID          uint          `gorm:"primaryKey"`
     Name        string        `gorm:"size:255;not null" cnm:"V产品名称"`
     Price       decimal.Decimal `gorm:"type:decimal(10,2)"`
-    CategoryID  uint          `gorm:"index"`
+    BrandID     uint          `gorm:"index"`
     CreatedAt   time.Time     `gorm:"autoCreateTime"`
     UpdatedAt   time.Time     `gorm:"autoUpdateTime"`
 }
@@ -300,12 +316,11 @@ type Product struct {
 ```go
 type ProductColumns struct {
     gormcnm.ColumnOperationClass
-    // 模型列的列名和类型
+    // 表中的列名和类型
     ID        gormcnm.ColumnName[uint]
-    Name      gormcnm.ColumnName[string]      // 映射到 "name"
-    V产品名称   gormcnm.ColumnName[string]      // 中文别名，映射到 Name 字段
+    V产品名称   gormcnm.ColumnName[string]      // 由 cnm 标签命名，映射到 "name"
     Price     gormcnm.ColumnName[decimal.Decimal]
-    CategoryID gormcnm.ColumnName[uint]
+    BrandID   gormcnm.ColumnName[uint]
     CreatedAt gormcnm.ColumnName[time.Time]
     UpdatedAt gormcnm.ColumnName[time.Time]
 }
@@ -313,10 +328,9 @@ type ProductColumns struct {
 func (*Product) Columns() *ProductColumns {
     return &ProductColumns{
         ID:        "id",
-        Name:      "name",
-        V产品名称:   "name",           // 中文别名，指向同一列
+        V产品名称:   "name",           // 中文字段名指向 name 列
         Price:     "price",
-        CategoryID: "category_id",
+        BrandID:   "brand_id",
         CreatedAt: "created_at",
         UpdatedAt: "updated_at",
     }
@@ -430,7 +444,7 @@ err := repo.With(ctx, db).Updates(
 - **[gormcngen](https://github.com/yylego/gormcngen)** - 使用 AST 的代码生成，实现类型安全的 GORM 操作（本项目）
 - **[gormrepo](https://github.com/yylego/gormrepo)** - 仓储模式实现，遵循 GORM 最佳实践
 - **[gormmom](https://github.com/yylego/gormmom)** - 原生语言 GORM 标签生成引擎，支持智能列名
-- **[gormzhcn](https://github.com/go-zwbc/gormzhcn)** - 完整的 GORM 中文编程接口
+- **[gormzhcn](https://github.com/yylego/gormzhcn)** - 完整的 GORM 中文编程接口
 
 每个包针对 GORM 开发的不同方面，从本地化到类型安全和代码生成。
 
@@ -494,10 +508,4 @@ MIT 许可证 - 详见 [LICENSE](LICENSE)。
 
 **祝你用这个包编程愉快！** 🎉🎉🎉
 
-<!-- TEMPLATE (ZH) END: STANDARD PROJECT FOOTER -->
-
----
-
-## 📈 GitHub Stars
-
-[![starring](https://starchart.cc/yylego/gormcngen.svg?variant=adaptive)](https://starchart.cc/yylego/gormcngen)
+<!-- TEMPLATE (ZH) CLOSE: STANDARD PROJECT FOOTER -->

@@ -1,5 +1,5 @@
 // Package example7 demonstrates type-safe join queries with Chinese column names
-// Shows comparison between raw SQL and column-based query approaches
+// Shows comparison between raw SQL and column-based approaches
 // Used to showcase table decoration and complex join operations
 //
 // example7 演示带有中文列名的类型安全联接查询
@@ -26,11 +26,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Global database instance for advanced column operations testing
+// Shared database instance in the advanced column operation tests
 // 用于高级列操作测试的全局数据库实例
 var caseDB *gorm.DB
 
-// TestMain sets up database with users and orders for join query testing
+// TestMain sets up the database with accounts and purchases to test join queries
 // Creates test data to demonstrate type-safe joins and complex queries
 //
 // TestMain 为联接查询测试设置用户和订单数据库
@@ -42,30 +42,30 @@ func TestMain(m *testing.M) {
 	}))
 	defer rese.F0(rese.P1(db.DB()).Close)
 
-	done.Done(db.AutoMigrate(&models.User{}, &models.Order{}))
+	done.Done(db.AutoMigrate(&models.Account{}, &models.Purchase{}))
 
-	const userCount = 10
-	users := make([]*models.User, 0, userCount)
-	for idx := 0; idx < userCount; idx++ {
-		users = append(users, &models.User{
+	const accountCount = 10
+	accounts := make([]*models.Account, 0, accountCount)
+	for idx := 0; idx < accountCount; idx++ {
+		accounts = append(accounts, &models.Account{
 			ID:   0,
 			Name: "name" + strconv.Itoa(idx+1),
 		})
 	}
-	done.Done(db.Create(&users).Error)
+	done.Done(db.Create(&accounts).Error)
 
-	const orderCount = 20
-	orders := make([]*models.Order, 0, orderCount)
-	for idx := 0; idx < orderCount; idx++ {
-		userID := users[rand.IntN(len(users))].ID
+	const purchaseCount = 20
+	purchases := make([]*models.Purchase, 0, purchaseCount)
+	for idx := 0; idx < purchaseCount; idx++ {
+		accountID := accounts[rand.IntN(len(accounts))].ID
 
-		orders = append(orders, &models.Order{
-			ID:     0,
-			UserID: userID,
-			Amount: float64(rand.IntN(1000)) + rand.Float64(),
+		purchases = append(purchases, &models.Purchase{
+			ID:        0,
+			AccountID: accountID,
+			Amount:    float64(rand.IntN(1000)) + rand.Float64(),
 		})
 	}
-	done.Done(db.Create(&orders).Error)
+	done.Done(db.Create(&purchases).Error)
 
 	caseDB = db
 	m.Run()
@@ -87,57 +87,57 @@ func TestExample(t *testing.T) {
 }
 
 // selectFunc0 demonstrates native SQL statement approach
-// Uses string literals for table names, column names, and joins
+// Uses string literals as table names, column names, and joins
 //
 // selectFunc0 演示传统的原生 SQL 查询方法
 // 使用字符串字面量表示表名、列名和联接
-func selectFunc0(t *testing.T, db *gorm.DB) []*UserOrder {
-	var results []*UserOrder
-	require.NoError(t, db.Table("users").
-		Select("users.id as user_id, users.name as user_name, orders.id as order_id, orders.amount as order_amount").
-		Joins("left join orders on orders.user_id = users.id").
-		Order("users.id asc, orders.id asc").
+func selectFunc0(t *testing.T, db *gorm.DB) []*AccountPurchase {
+	var results []*AccountPurchase
+	require.NoError(t, db.Table("accounts").
+		Select("accounts.id as account_id, accounts.name as account_name, purchases.id as purchase_id, purchases.amount as purchase_amount").
+		Joins("left join purchases on purchases.account_id = accounts.id").
+		Order("accounts.id asc, purchases.id asc").
 		Scan(&results).Error)
 	t.Log(neatjsons.S(results))
 	return results
 }
 
-type UserOrder struct {
-	UserID      uint
-	UserName    string
-	OrderID     uint
-	OrderAmount float64
+type AccountPurchase struct {
+	AccountID      uint
+	AccountName    string
+	PurchaseID     uint
+	PurchaseAmount float64
 }
 
-// selectFunc1 demonstrates type-safe column-based query approach
+// selectFunc1 demonstrates type-safe column-based approach
 // Uses generated column structs with Chinese column names and type protection
 //
 // selectFunc1 演示类型安全的基于列的查询方法
 // 使用生成的列结构体和中文列名及类型安全
-func selectFunc1(t *testing.T, db *gorm.DB) []*UserOrder {
-	// Create model instances and get the table-decorated columns
+func selectFunc1(t *testing.T, db *gorm.DB) []*AccountPurchase {
+	// Create struct instances and get the table-decorated columns
 	// 创建模型实例并获取带表装饰的列
-	user := &models.User{}
-	userColumns := user.TableColumns(gormcnm.NewTableDecoration(user.TableName()))
-	order := &models.Order{}
-	orderColumns := order.TableColumns(gormcnm.NewTableDecoration(order.TableName()))
+	account := &models.Account{}
+	accountColumns := account.TableColumns(gormcnm.NewTableDecoration(account.TableName()))
+	purchase := &models.Purchase{}
+	purchaseColumns := purchase.TableColumns(gormcnm.NewTableDecoration(purchase.TableName()))
 
-	// Create result struct for column name mapping
+	// Create result struct as the column name mapping
 	// 为列名映射创建结果结构体
-	userOrder := &UserOrder{}
+	accountPurchase := &AccountPurchase{}
 
-	// Build type-safe query with Chinese column names
+	// Build the type-safe statement with Chinese column names
 	// 使用中文列名构建类型安全查询
-	var results []*UserOrder
-	require.NoError(t, db.Table(user.TableName()).
+	var results []*AccountPurchase
+	require.NoError(t, db.Table(account.TableName()).
 		Select(gormcnmstub.MergeStmts(
-			userColumns.V主键.AsName(gormcnm.Cnm(userOrder.UserID, "user_id")),
-			userColumns.V名字.AsName(gormcnm.Cnm(userOrder.UserName, "user_name")),
-			orderColumns.V订单主键.AsName(gormcnm.Cnm(userOrder.OrderID, "order_id")),
-			orderColumns.V订单金额.AsName(gormcnm.Cnm(userOrder.OrderAmount, "order_amount")),
+			accountColumns.V主键.AsName(gormcnm.Cnm(accountPurchase.AccountID, "account_id")),
+			accountColumns.V名字.AsName(gormcnm.Cnm(accountPurchase.AccountName, "account_name")),
+			purchaseColumns.V订单主键.AsName(gormcnm.Cnm(accountPurchase.PurchaseID, "purchase_id")),
+			purchaseColumns.V订单金额.AsName(gormcnm.Cnm(accountPurchase.PurchaseAmount, "purchase_amount")),
 		)).
-		Joins(userColumns.LEFTJOIN(order.TableName()).On(orderColumns.V用户主键.OnEq(userColumns.V主键))).
-		Order(userColumns.V主键.Ob("asc").Ob(orderColumns.V订单主键.Ob("asc")).Ox()).
+		Joins(accountColumns.LEFTJOIN(purchase.TableName()).On(purchaseColumns.V用户主键.OnEq(accountColumns.V主键))).
+		Order(accountColumns.V主键.Ob("asc").Ob(purchaseColumns.V订单主键.Ob("asc")).Ox()).
 		Scan(&results).Error)
 	t.Log(neatjsons.S(results))
 	return results

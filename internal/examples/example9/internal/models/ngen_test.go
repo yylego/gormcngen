@@ -20,13 +20,13 @@ func TestGenerate(t *testing.T) {
 	t.Log(absPath)
 
 	options := gormcngen.NewOptions().
-		WithColumnClassExportable(true). // Exportable class names like UserColumns // 可导出的类名如 UserColumns
+		WithColumnClassExportable(true). // Exportable class names like AccountColumns // 可导出的类名如 AccountColumns
 		WithColumnsMethodRecvName("c").  // Set method argument name // 设置方法接收者名称
 		WithColumnsCheckFieldType(true). // Enable field type checking // 启用字段类型检查
 		WithUseTagName(true)
 
 	cfg := gormcngen.NewConfigs([]interface{}{
-		&User{},
+		&Account{},
 		&Profile{},
 	}, options, absPath)
 	cfg.Gen()

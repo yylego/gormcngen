@@ -1,6 +1,6 @@
 // Package models demonstrates column generation with SQL reserved words as field names
 // Auto contains Example struct with Create, Select, Update, Delete fields
-// Used to showcase SafeCnm handling for SQL-conflicting column names
+// Used to showcase SafeCnm handling of SQL-conflicting column names
 //
 // models 包演示使用 SQL 保留字作为字段名的列生成
 // 自动包含带有 Create、Select、Update、Delete 字段的 Example 结构体

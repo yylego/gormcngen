@@ -16,7 +16,7 @@ func (c *Student) Columns() *StudentColumns {
 		V班级编码: gormcnm.Cnm(c.ClassCode, "class_code"),
 		V学号:   gormcnm.Cnm(c.Num, "num"),
 		V名字:   gormcnm.Cnm(c.Name, "name"),
-		V性别:   gormcnm.Cnm(c.Sex, "sex"),
+		V科类:   gormcnm.Cnm(c.Track, "track"),
 		V生日:   gormcnm.Cnm(c.BornDate, "age"),
 	}
 }
@@ -28,7 +28,7 @@ type StudentColumns struct {
 	V班级编码 gormcnm.ColumnName[string]
 	V学号   gormcnm.ColumnName[int]
 	V名字   gormcnm.ColumnName[string]
-	V性别   gormcnm.ColumnName[SexType]
+	V科类   gormcnm.ColumnName[TrackType]
 	V生日   gormcnm.ColumnName[string]
 }
 
@@ -37,7 +37,7 @@ func (c *Class) Columns() *ClassColumns {
 		// Auto-generated: column names and types mapping. DO NOT EDIT. // 自动生成：列名和类型映射。请勿编辑。
 		V班级编码: gormcnm.Cnm(c.V班级编码, "class_code"),
 		V班级名称: gormcnm.Cnm(c.V班级名称, "class_name"),
-		V班主任名: gormcnm.Cnm(c.V班主任名, "main_teacher_name"),
+		V班主任名: gormcnm.Cnm(c.V班主任名, "class_head_name"),
 	}
 }
 

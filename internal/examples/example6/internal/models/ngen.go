@@ -24,7 +24,7 @@ func (one *Person) TableColumns(decoration gormcnm.ColumnNameDecoration) *Person
 		ID:        gormcnm.Cmn(one.ID, "id", decoration),
 		Name:      gormcnm.Cmn(one.Name, "name", decoration),
 		BirthDate: gormcnm.Cmn(one.BirthDate, "birth_date", decoration),
-		Gender:    gormcnm.Cmn(one.Gender, "gender", decoration),
+		Enrolled:  gormcnm.Cmn(one.Enrolled, "enrolled", decoration),
 		CreatedAt: gormcnm.Cmn(one.CreatedAt, "created_at", decoration),
 		UpdatedAt: gormcnm.Cmn(one.UpdatedAt, "updated_at", decoration),
 	}
@@ -37,7 +37,7 @@ type PersonColumns struct {
 	ID        gormcnm.ColumnName[int32]
 	Name      gormcnm.ColumnName[string]
 	BirthDate gormcnm.ColumnName[string]
-	Gender    gormcnm.ColumnName[bool]
+	Enrolled  gormcnm.ColumnName[bool]
 	CreatedAt gormcnm.ColumnName[time.Time]
 	UpdatedAt gormcnm.ColumnName[time.Time]
 }

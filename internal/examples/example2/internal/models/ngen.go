@@ -20,7 +20,7 @@ func (c *Person) Columns() *PersonColumns {
 		ID:        gormcnm.Cnm(c.ID, "id"),
 		Name:      gormcnm.Cnm(c.Name, "name"),
 		BirthDate: gormcnm.Cnm(c.BirthDate, "birth_date"),
-		Gender:    gormcnm.Cnm(c.Gender, "gender"),
+		Enrolled:  gormcnm.Cnm(c.Enrolled, "enrolled"),
 		CreatedAt: gormcnm.Cnm(c.CreatedAt, "created_at"),
 		UpdatedAt: gormcnm.Cnm(c.UpdatedAt, "updated_at"),
 	}
@@ -33,7 +33,7 @@ type PersonColumns struct {
 	ID        gormcnm.ColumnName[int32]
 	Name      gormcnm.ColumnName[string]
 	BirthDate gormcnm.ColumnName[string]
-	Gender    gormcnm.ColumnName[bool]
+	Enrolled  gormcnm.ColumnName[bool]
 	CreatedAt gormcnm.ColumnName[time.Time]
 	UpdatedAt gormcnm.ColumnName[time.Time]
 }

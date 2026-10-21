@@ -9,8 +9,8 @@ import (
 	"github.com/yylego/runpath/runtestpath"
 )
 
-// TestGenerate triggers column code generation for demo1 models
-// Allows integration with go generate ./... for build automation
+// TestGenerate triggers column code generation of the demo1 structs
+// Works with go generate ./... in build automation
 //
 // TestGenerate 为 demo1 模型触发列代码生成
 // 支持与 go generate ./... 集成以实现构建自动化
@@ -24,7 +24,7 @@ func TestGenerate(t *testing.T) {
 	// Confirm target file exists // 确认目标文件存在
 	require.True(t, osmustexist.IsFile(absPath))
 
-	// Define models to generate columns for // 定义要生成列的模型
+	// Structs whose columns get generated // 定义要生成列的模型
 	objects := []any{&Example{}}
 
 	options := gormcngen.NewOptions().

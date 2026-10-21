@@ -20,7 +20,7 @@ func TestGenerate(t *testing.T) {
 	t.Log(absPath)
 
 	options := gormcngen.NewOptions().
-		WithColumnClassExportable(true). // Exportable class names like UserColumns // 可导出的类名如 UserColumns
+		WithColumnClassExportable(true). // Exportable class names like AccountColumns // 可导出的类名如 AccountColumns
 		WithEmbedColumnOperations(true). // Embed column operations // 嵌入列操作方法
 		WithUseTagName(true).            // Enable tag name usage // 启用标签名使用
 		WithTagKeyName("cnm").           // Set tag name to cnm // 设置标签名为 cnm
@@ -28,6 +28,6 @@ func TestGenerate(t *testing.T) {
 		WithColumnsCheckFieldType(true). // Enable field type checking // 启用字段类型检查
 		WithIsGenFuncTableColumns(true)  // Generate TableColumns method // 生成 TableColumns 方法
 
-	cfg := gormcngen.NewConfigs([]interface{}{&User{}, &Order{}}, options, absPath)
+	cfg := gormcngen.NewConfigs([]interface{}{&Account{}, &Purchase{}}, options, absPath)
 	cfg.Gen()
 }

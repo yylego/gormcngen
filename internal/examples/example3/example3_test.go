@@ -23,11 +23,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Global database instance for SQL keyword handling tests
+// Shared database instance in the SQL keyword handling tests
 // 用于 SQL 关键字处理测试的全局数据库实例
 var caseDB *gorm.DB
 
-// TestMain sets up database for SQL keyword column testing
+// TestMain sets up the database to test SQL keyword columns
 // Creates test data with SQL reserved word field names
 //
 // TestMain 为 SQL 关键字列测试设置数据库

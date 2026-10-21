@@ -1,6 +1,6 @@
-// Package example2 demonstrates column-based query operations with GORM
-// Shows type-safe WHERE conditions, OR/AND combinations, and query expression building
-// Used to showcase advanced column operation chaining and query construction
+// Package example2 demonstrates column-based search operations with GORM
+// Shows type-safe WHERE conditions, OR/AND combinations, and condition expression building
+// Used to showcase advanced column operation chaining and condition construction
 //
 // example2 演示基于列的 GORM 查询操作
 // 展示类型安全的 WHERE 条件、OR/AND 组合和查询表达式构建
@@ -23,7 +23,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Global database instance for tests
+// Shared database instance in the tests
 // 测试用的全局数据库实例
 var caseDB *gorm.DB
 
@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 		ID:        0,
 		Name:      "abc",
 		BirthDate: "1970-01-01",
-		Gender:    false,
+		Enrolled:  false,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}).Error)
@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 		ID:        0,
 		Name:      "aaa",
 		BirthDate: "2023-12-28",
-		Gender:    false,
+		Enrolled:  false,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}).Error)
@@ -58,21 +58,21 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// TestSelect demonstrates basic column-based query operations
-// Uses type-safe column references for WHERE conditions
+// TestSelect demonstrates basic column-based search operations
+// Uses type-safe column references in WHERE conditions
 //
 // TestSelect 演示基本的基于列的查询操作
 // 使用类型安全的列引用进行 WHERE 条件查询
 func TestSelect(t *testing.T) {
 	var one models.Person
 	c := one.Columns()
-	require.NoError(t, caseDB.Where(c.Name.Eq("abc")).Where(c.Gender.IsFALSE()).First(&one).Error)
+	require.NoError(t, caseDB.Where(c.Name.Eq("abc")).Where(c.Enrolled.IsFALSE()).First(&one).Error)
 	require.Equal(t, "abc", one.Name)
 	t.Log(neatjsons.S(one))
 }
 
-// TestSelect_2 demonstrates complex query with OR/AND combinations
-// Shows advanced column operation chaining and query building
+// TestSelect_2 demonstrates a complex search with OR/AND combinations
+// Shows advanced column operation chaining and condition building
 //
 // TestSelect_2 演示带有 OR/AND 组合的复杂查询
 // 展示高级列操作链式调用和查询构建
@@ -86,14 +86,14 @@ func TestSelect_2(t *testing.T) {
 		AND(
 			c.CreatedAt.Qx(">=?", time.Unix(0, 0).In(time.UTC)),
 			c.UpdatedAt.Qx(">=?", time.Unix(0, 0).In(time.UTC)),
-		).Qx4()).Where(c.Gender.IsFALSE()).Find(&res).Error)
+		).Qx4()).Where(c.Enrolled.IsFALSE()).Find(&res).Error)
 	require.Contains(t, []string{"abc", "aaa"}, res[0].Name)
 	require.Contains(t, []string{"abc", "aaa"}, res[1].Name)
 	t.Log(neatjsons.S(res))
 }
 
-// TestSelect_3 demonstrates query expression building with custom conditions
-// Uses column query expressions with AND logic combinations
+// TestSelect_3 demonstrates condition expression building with custom conditions
+// Uses column condition expressions with AND logic combinations
 //
 // TestSelect_3 演示使用自定义条件构建查询表达式
 // 使用列查询表达式与 AND 逻辑组合
@@ -103,7 +103,7 @@ func TestSelect_3(t *testing.T) {
 
 	qsx := c.Name.Qx("= ?", "abc").
 		AND(
-			c.Gender.Qc("IS FALSE").Qx(),
+			c.Enrolled.Qc("IS FALSE").Qx(),
 			c.BirthDate.Qx("=?", "1970-01-01"),
 		)
 
@@ -112,8 +112,8 @@ func TestSelect_3(t *testing.T) {
 	t.Log(neatjsons.S(one))
 }
 
-// TestSelect_4 demonstrates advanced query building with nested expressions
-// Shows column-level query expression composition and nesting
+// TestSelect_4 demonstrates advanced condition building with nested expressions
+// Shows column-scope expression composition and nesting
 //
 // TestSelect_4 演示使用嵌套表达式的高级查询构建
 // 展示列级查询表达式组合和嵌套
@@ -124,7 +124,7 @@ func TestSelect_4(t *testing.T) {
 	qsx := c.Qx(
 		c.Name.Eq("abc"),
 	).AND(
-		c.Qx(c.Gender.IsFALSE()),
+		c.Qx(c.Enrolled.IsFALSE()),
 		c.Qx(c.BirthDate.Eq("1970-01-01")),
 	)
 

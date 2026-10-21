@@ -30,7 +30,7 @@ type Demo struct {
 }
 
 // TestConfigs_Generate tests code generation with multiple GORM models
-// Validates that Columns() methods and column structs are generated correctly
+// Validates that Columns() methods and column structs come out as expected
 //
 // TestConfigs_Generate 测试多个 GORM 模型的代码生成
 // 验证 Columns() 方法和列结构体能正确生成

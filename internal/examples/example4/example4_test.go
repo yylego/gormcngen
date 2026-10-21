@@ -22,12 +22,12 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Global database instance for Chinese column name tests
+// Shared database instance in the Chinese column name tests
 // 用于中文列名测试的全局数据库实例
 var caseDB *gorm.DB
 
 // TestMain sets up database with Chinese column names and test data
-// Creates students and classes with Chinese field names for testing
+// Creates students and classes with Chinese field names as test data
 //
 // TestMain 为中文列名和测试数据设置数据库
 // 创建带有中文字段名的学生和班级数据进行测试
@@ -57,21 +57,21 @@ func TestMain(m *testing.M) {
 		ClassCode: "LOVE",
 		Num:       0,
 		Name:      "杨亦乐",
-		Sex:       models.Male,
+		Track:     models.Science,
 		BornDate:  "1990-08-08",
 	}).Error)
 	done.Done(db.Save(&models.Student{
 		ClassCode: "LOVE",
 		Num:       0,
 		Name:      "刘亦菲",
-		Sex:       models.Female,
+		Track:     models.Arts,
 		BornDate:  "1987-08-25",
 	}).Error)
 	done.Done(db.Save(&models.Student{
 		ClassCode: "HANDSOME",
 		Num:       0,
 		Name:      "古天乐",
-		Sex:       models.Male,
+		Track:     models.Science,
 		BornDate:  "1970-10-21",
 	}).Error)
 
@@ -79,8 +79,8 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-// TestSelect demonstrates basic query with Chinese column names
-// Uses type-safe Chinese column references for database operations
+// TestSelect demonstrates a basic search with Chinese column names
+// Uses type-safe Chinese column references in database operations
 //
 // TestSelect 演示使用中文列名的基本查询
 // 使用类型安全的中文列引用进行数据库操作
@@ -92,7 +92,7 @@ func TestSelect(t *testing.T) {
 	t.Log(neatjsons.S(one))
 }
 
-// TestSelect_x2x demonstrates multi-condition query with Chinese columns
+// TestSelect_x2x demonstrates a multi-condition search with Chinese columns
 // Uses multiple WHERE conditions with Chinese field names and enum values
 //
 // TestSelect_x2x 演示使用中文列的多条件查询
@@ -100,20 +100,20 @@ func TestSelect(t *testing.T) {
 func TestSelect_x2x(t *testing.T) {
 	var one models.Student
 	c := one.Columns()
-	require.NoError(t, caseDB.Where(c.V名字.Eq("刘亦菲")).Where(c.V性别.Eq(models.Female)).First(&one).Error)
+	require.NoError(t, caseDB.Where(c.V名字.Eq("刘亦菲")).Where(c.V科类.Eq(models.Arts)).First(&one).Error)
 	require.Equal(t, "刘亦菲", one.Name)
 	t.Log(neatjsons.S(one))
 }
 
 // TestSelect_x3x demonstrates record not found scenario with Chinese columns
-// Tests error handling when query conditions don't match any records
+// Tests the failure path when the conditions match no records
 //
 // TestSelect_x3x 演示使用中文列的记录不存在场景
 // 测试当查询条件不匹配任何记录时的错误处理
 func TestSelect_x3x(t *testing.T) {
 	var one models.Student
 	c := one.Columns()
-	err := caseDB.Where(c.V名字.Eq("古天乐")).Where(c.V性别.Eq(models.Female)).First(&one).Error
+	err := caseDB.Where(c.V名字.Eq("古天乐")).Where(c.V科类.Eq(models.Arts)).First(&one).Error
 	require.ErrorIs(t, err, gorm.ErrRecordNotFound)
 }
 

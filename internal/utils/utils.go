@@ -1,6 +1,6 @@
-// Package utils: Internal utilities for gormcngen code generation
-// Provides functions for string manipulation and exportable status conversion
-// Supports case conversion and status toggles for generated identifiers
+// Package utils: support functions behind gormcngen code generation
+// Provides string manipulation and exportable-status conversion functions
+// Supports case conversion and status toggles on generated names
 //
 // utils: gormcngen 代码生成的内部工具函数
 // 提供字符串操作和导出性转换的辅助函数
@@ -11,14 +11,16 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 	"unicode"
 
 	"github.com/yylego/rese"
 )
 
-// ConvertToUnexportable converts the first string character to lowercase
-// Transforms exported identifiers to unexported ones for internal use
+// ConvertToUnexportable converts the first rune of the string to lowercase
+// Transforms exported names to unexported ones, used inside the package
 // Returns the string with the first rune converted to lowercase
 //
 // ConvertToUnexportable 将字符串的第一个字符转换为小写
@@ -32,8 +34,8 @@ func ConvertToUnexportable(s string) string {
 	return string(runes)
 }
 
-// IsExportable checks if an identifier is exportable (starts with uppercase)
-// Returns true if the first character is uppercase, false otherwise
+// IsExportable checks if a name is exportable (starts with uppercase)
+// Returns true if the first rune is uppercase, else false
 // Used to determine status of generated structs and methods
 //
 // IsExportable 检查标识符是否可导出（以大写字母开头）
@@ -43,9 +45,9 @@ func IsExportable(name string) bool {
 	return unicode.IsUpper(([]rune(name))[0])
 }
 
-// SwitchToggleExportable toggles the exportable status of an identifier
-// Converts uppercase first character to lowercase and vice versa
-// Used for finding alternative struct names during AST analysis
+// SwitchToggleExportable toggles the exportable status of a name
+// Converts an uppercase first rune to lowercase and vice versa
+// Used to find alternative struct names during AST analysis
 //
 // SwitchToggleExportable 切换标识符的可导出性
 // 将大写第一个字符转换为小写，反之亦然
@@ -94,4 +96,25 @@ func GetGenPosFuncMark(skip int) string {
 	// 只提取函数名，不包含完整的包路径
 	funcName := filepath.Base(funcInfo.Name())
 	return fmt.Sprintf("%s:%d -> %s", filename, line, funcName)
+}
+
+// moduleVersion matches a module version element such as "v2"
+// moduleVersion 匹配 "v2" 这类模块版本段
+var moduleVersion = regexp.MustCompile(`^v[0-9]+$`)
+
+// PackageNameOfPath guesses the package name of an import path from its last element.
+// Both a "/vN" element and a ".vN" suffix mark a module version and get skipped, e.g. "gopkg.in/yaml.v3" -> "yaml", "github.com/a/b/v2" -> "b".
+//
+// PackageNameOfPath 根据导入路径的最后一段推断包名。
+// "/vN" 段或 ".vN" 后缀表示模块版本，会被跳过，如 "gopkg.in/yaml.v3" -> "yaml"、"github.com/a/b/v2" -> "b"。
+func PackageNameOfPath(pkgPath string) string {
+	elems := strings.Split(pkgPath, "/")
+	name := elems[len(elems)-1]
+	if len(elems) > 1 && moduleVersion.MatchString(name) {
+		name = elems[len(elems)-2]
+	}
+	if idx := strings.LastIndex(name, ".v"); idx > 0 && moduleVersion.MatchString(name[idx+1:]) {
+		name = name[:idx]
+	}
+	return name
 }

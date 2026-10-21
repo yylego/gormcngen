@@ -1,6 +1,6 @@
-// Package example1 demonstrates basic model column generation and usage
+// Package example1 demonstrates basic column generation and its usage
 // Shows simple column mapping creation and fake data testing with gofakeit
-// Used as entry point example for understanding gormcngen basics
+// Serves as the first example to learn gormcngen basics
 //
 // example1 演示基本的模型列生成和使用
 // 展示简单列映射创建和使用 gofakeit 的虚假数据测试
@@ -16,7 +16,7 @@ import (
 	"github.com/yylego/neatjson/neatjsons"
 )
 
-// TestExample1 demonstrates basic model column generation and usage
+// TestExample1 demonstrates basic column generation and its usage
 // Shows how to use gofakeit to generate test data and validate column mappings
 //
 // TestExample1 演示基本的模型列生成和使用

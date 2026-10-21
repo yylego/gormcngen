@@ -1,9 +1,13 @@
+<!-- TEMPLATE (EN) BEGIN: BADGES -->
+
 [![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/yylego/gormcngen/release.yml?branch=main&label=BUILD)](https://github.com/yylego/gormcngen/actions/workflows/release.yml?query=branch%3Amain)
 [![GoDoc](https://pkg.go.dev/badge/github.com/yylego/gormcngen)](https://pkg.go.dev/github.com/yylego/gormcngen)
 [![Coverage Status](https://img.shields.io/coveralls/github/yylego/gormcngen/main.svg)](https://coveralls.io/github/yylego/gormcngen?branch=main)
-[![Supported Go Versions](https://img.shields.io/badge/Go-1.25+-lightgrey.svg)](https://go.dev/)
+[![Supported Go Versions](https://img.shields.io/badge/Go-1.27%2B-lightgrey.svg)](https://go.dev/)
 [![GitHub Release](https://img.shields.io/github/release/yylego/gormcngen.svg)](https://github.com/yylego/gormcngen/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/yylego/gormcngen)](https://goreportcard.com/report/github.com/yylego/gormcngen)
+
+<!-- TEMPLATE (EN) CLOSE: BADGES -->
 
 # gormcngen
 
@@ -29,7 +33,7 @@ Like `SQLAlchemy` in the Python ecosystem, which allows developers to access col
 
 [中文说明](README.zh.md)
 
-<!-- TEMPLATE (EN) END: LANGUAGE NAVIGATION -->
+<!-- TEMPLATE (EN) CLOSE: LANGUAGE NAVIGATION -->
 
 ---
 
@@ -205,7 +209,7 @@ err := db.Where(cls.Username.Eq("alice")).
 ### Advanced Usage
 
 ```go
-// Basic configuration (matches internal examples)
+// Basic configuration (as in the bundled examples)
 options := gormcngen.NewOptions().
     WithColumnClassExportable(true).           // Generate exported ExampleColumns struct
     WithEmbedColumnOperations(false)           // Don't embed operation methods
@@ -224,8 +228,8 @@ advancedOptions := gormcngen.NewOptions().
     WithIsGenFuncTableColumns(true)            // Generate TableColumns function
 
 // Batch processing multiple models
-allModels := []interface{}{&Account{}, &Product{}, &Item{}, &Client{}}
-configs := gormcngen.NewConfigs(allModels, options, "models_gen.go")
+models := []interface{}{&Account{}, &Product{}, &Item{}, &Client{}}
+configs := gormcngen.NewConfigs(models, options, "models_gen.go")
 configs.WithIsGenPreventEdit(true)  // Add "DO NOT EDIT" headers to generated files
 configs.WithGeneratedFromPos(gormcngen.GetGenPosFuncMark(0))  // Show generation source location (default: show)
 configs.WithGoBuildDirective(gormcngen.DirectiveSkipGenerate)  // Add build directive (recommended)
@@ -280,16 +284,28 @@ Each example in this project uses `WithGoBuildDirective`. Though not required, w
 
 ## Advanced Features
 
+### Supported Field Shapes
+
+gormcngen handles these field shapes:
+
+| Field in the struct                                                                   | Generated column field                                                                      |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Anonymous embedding, e.g. `gorm.Model`                                                | Expands into `ID`, `CreatedAt`, ... as if declared inline                                   |
+| Named embedding, e.g. `` Contact Contact `gorm:"embedded;embeddedPrefix:contact_"` `` | Gets the field name in front: `ContactName` → `contact_name`, read through `c.Contact.Name` |
+| Association, e.g. `Profile Profile` / `Card *Card`                                    | Skipped, since the data sits in a separate table                                            |
+| Serialized value, e.g. `` Tags []Tag `gorm:"serializer:json"` ``                      | One column of the same Go type: `ColumnName[[]Tag]`                                         |
+| Generic type, e.g. `datatypes.JSONType[Meta]`                                         | `ColumnName[datatypes.JSONType[Meta]]`, with the needed imports added                       |
+
 ### Multi-Language Field Support
 
-The `cnm` tag lets you define Chinese aliases to use as field names, which are generated as extra struct fields:
+The `cnm` tag lets you define Chinese aliases to use as field names, which replace the Go field names in the generated struct:
 
 ```go
 type Product struct {
     ID          uint          `gorm:"primaryKey"`
     Name        string        `gorm:"size:255;not null" cnm:"V产品名称"`
     Price       decimal.Decimal `gorm:"type:decimal(10,2)"`
-    CategoryID  uint          `gorm:"index"`
+    BrandID     uint          `gorm:"index"`
     CreatedAt   time.Time     `gorm:"autoCreateTime"`
     UpdatedAt   time.Time     `gorm:"autoUpdateTime"`
 }
@@ -300,12 +316,11 @@ type Product struct {
 ```go
 type ProductColumns struct {
     gormcnm.ColumnOperationClass
-    // The column names and types of the model's columns
+    // Column names and types in the table
     ID       gormcnm.ColumnName[uint]
-    Name     gormcnm.ColumnName[string]           // Maps to "name"
-    V产品名称   gormcnm.ColumnName[string]           // Chinese alias mapping to Name field
+    V产品名称   gormcnm.ColumnName[string]           // Name taken from the cnm tag, maps to "name"
     Price    gormcnm.ColumnName[decimal.Decimal]
-    CategoryID gormcnm.ColumnName[uint]
+    BrandID  gormcnm.ColumnName[uint]
     CreatedAt gormcnm.ColumnName[time.Time]
     UpdatedAt gormcnm.ColumnName[time.Time]
 }
@@ -313,10 +328,9 @@ type ProductColumns struct {
 func (*Product) Columns() *ProductColumns {
     return &ProductColumns{
         ID:       "id",
-        Name:     "name",
-        V产品名称:   "name",      // Chinese alias pointing to same column
+        V产品名称:   "name",      // The Chinese field name points at the name column
         Price:    "price",
-        CategoryID: "category_id",
+        BrandID:  "brand_id",
         CreatedAt: "created_at",
         UpdatedAt: "updated_at",
     }
@@ -331,7 +345,7 @@ With the generated Chinese aliases, you can write queries using native language:
 var product Product
 var cls = product.Columns()
 
-// Query using Chinese field names - same database column, different Go field name
+// Search with Chinese field names - same database column, different Go field name
 if err := db.Where(cls.V产品名称.Eq("iPhone")).
     Where(cls.Price.Gte(5000.00)).
     First(&product).Error; err != nil {
@@ -430,7 +444,7 @@ Explore the complete GORM ecosystem with these integrated packages:
 - **[gormcngen](https://github.com/yylego/gormcngen)** - Code generation using AST enabling type-safe GORM operations (this project)
 - **[gormrepo](https://github.com/yylego/gormrepo)** - Repo pattern implementation with GORM best practices
 - **[gormmom](https://github.com/yylego/gormmom)** - Native language GORM tag generation engine with smart column naming
-- **[gormzhcn](https://github.com/go-zwbc/gormzhcn)** - Complete Chinese programming interface with GORM
+- **[gormzhcn](https://github.com/yylego/gormzhcn)** - Complete Chinese programming interface with GORM
 
 Each package targets different aspects of GORM development, from localization to type protection and code generation.
 
@@ -494,10 +508,4 @@ Welcome to contribute to this project via submitting merge requests and reportin
 
 **Have Fun Coding with this package!** 🎉🎉🎉
 
-<!-- TEMPLATE (EN) END: STANDARD PROJECT FOOTER -->
-
----
-
-## 📈 GitHub Stars
-
-[![starring](https://starchart.cc/yylego/gormcngen.svg?variant=adaptive)](https://starchart.cc/yylego/gormcngen)
+<!-- TEMPLATE (EN) CLOSE: STANDARD PROJECT FOOTER -->

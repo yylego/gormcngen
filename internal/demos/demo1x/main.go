@@ -33,7 +33,7 @@ func main() {
 	_ = db.Save(&models.Example{Name: "abc", Type: "xyz", Rank: 123}).Error
 	_ = db.Save(&models.Example{Name: "aaa", Type: "xxx", Rank: 456}).Error
 
-	{ // Native SQL query // 原生 SQL 查询
+	{ // Native SQL statement // 原生 SQL 查询
 		var res models.Example
 		done.Done(db.Where("name=?", "abc").First(&res).Error)
 		/* Executed SQL // 执行的 SQL:
@@ -42,7 +42,7 @@ func main() {
 		*/
 		zaplog.SUG.Debug(neatjsons.S(res))
 	}
-	{ // Type-safe column query // 类型安全的列查询
+	{ // Type-safe column statement // 类型安全的列查询
 		var res models.Example
 		var cls = res.Columns()
 		done.Done(db.Where(cls.Name.Eq("abc")).First(&res).Error)
@@ -52,7 +52,7 @@ func main() {
 		*/
 		zaplog.SUG.Debug(neatjsons.S(res))
 	}
-	{ // Native SQL query with multiple conditions // 原生 SQL 多条件查询
+	{ // Native SQL statement with multiple conditions // 原生 SQL 多条件查询
 		var res models.Example
 		done.Done(db.Where("name=?", "abc").
 			Where("type=?", "xyz").
@@ -66,7 +66,7 @@ func main() {
 		*/
 		zaplog.SUG.Debug(neatjsons.S(res))
 	}
-	{ // Type-safe column query with multiple conditions // 类型安全多条件查询
+	{ // Type-safe column statement with multiple conditions // 类型安全多条件查询
 		var res models.Example
 		var cls = res.Columns()
 		done.Done(db.Where(cls.Name.Eq("abc")).

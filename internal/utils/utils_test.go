@@ -16,3 +16,17 @@ func TestGetGenPosFuncMark(t *testing.T) {
 	require.NotEmpty(t, result)
 	t.Log("result:", result)
 }
+
+func TestPackageNameOfPath(t *testing.T) {
+	for pkgPath, want := range map[string]string{
+		"time":                       "time",
+		"database/sql":               "sql",
+		"gorm.io/datatypes":          "datatypes",
+		"gopkg.in/yaml.v3":           "yaml",
+		"github.com/a/b/v2":          "b",
+		"github.com/yylego/gormcnm":  "gormcnm",
+		"github.com/a/version.vnext": "version.vnext",
+	} {
+		require.Equal(t, want, PackageNameOfPath(pkgPath), pkgPath)
+	}
+}

@@ -1,4 +1,4 @@
-// Package models: GORM model definitions for demo1 application
+// Package models: GORM struct definitions of the demo1 application
 // Contains example GORM models used to showcase automatic column generation
 // Demonstrates various GORM tag configurations and field types in a clean structure
 //
@@ -7,9 +7,9 @@
 // 在清晰结构中演示各种 GORM 标签配置和字段类型
 package models
 
-// Example is a GORM model defining 3 fields (name, type, rank)
+// Example is a GORM struct defining 3 fields (name, type, rank)
 // Demonstrates basic GORM field configurations and column mappings
-// Used as input for gormcngen to generate type-safe column structures
+// Used as gormcngen input to generate type-safe column structures
 //
 // Example 是一个定义 3 个字段（name、type、rank）的 GORM 模型
 // 演示基本的 GORM 字段配置和列映射

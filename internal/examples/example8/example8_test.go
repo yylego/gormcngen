@@ -26,12 +26,12 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Global database instance for extended column operations testing
+// Shared database instance in the extended column operation tests
 // 用于扩展列操作测试的全局数据库实例
 var caseDB *gorm.DB
 
 // TestMain sets up database with advanced column generation configuration
-// Creates test data for testing extended column features and query operations
+// Creates test data to exercise extended column features and search operations
 //
 // TestMain 为高级列生成配置设置数据库
 // 创建测试数据来测试扩展列特性和查询操作
@@ -42,30 +42,30 @@ func TestMain(m *testing.M) {
 	}))
 	defer rese.F0(rese.P1(db.DB()).Close)
 
-	done.Done(db.AutoMigrate(&models.User{}, &models.Order{}))
+	done.Done(db.AutoMigrate(&models.Account{}, &models.Purchase{}))
 
-	const userCount = 10
-	users := make([]*models.User, 0, userCount)
-	for idx := 0; idx < userCount; idx++ {
-		users = append(users, &models.User{
+	const accountCount = 10
+	accounts := make([]*models.Account, 0, accountCount)
+	for idx := 0; idx < accountCount; idx++ {
+		accounts = append(accounts, &models.Account{
 			ID:   0,
 			Name: "name" + strconv.Itoa(idx+1),
 		})
 	}
-	done.Done(db.Create(&users).Error)
+	done.Done(db.Create(&accounts).Error)
 
-	const orderCount = 20
-	orders := make([]*models.Order, 0, orderCount)
-	for idx := 0; idx < orderCount; idx++ {
-		userID := users[rand.IntN(len(users))].ID
+	const purchaseCount = 20
+	purchases := make([]*models.Purchase, 0, purchaseCount)
+	for idx := 0; idx < purchaseCount; idx++ {
+		accountID := accounts[rand.IntN(len(accounts))].ID
 
-		orders = append(orders, &models.Order{
-			ID:     0,
-			UserID: userID,
-			Amount: float64(rand.IntN(1000)) + rand.Float64(),
+		purchases = append(purchases, &models.Purchase{
+			ID:        0,
+			AccountID: accountID,
+			Amount:    float64(rand.IntN(1000)) + rand.Float64(),
 		})
 	}
-	done.Done(db.Create(&orders).Error)
+	done.Done(db.Create(&purchases).Error)
 
 	caseDB = db
 	m.Run()
@@ -77,7 +77,7 @@ func TestMain(m *testing.M) {
 // TestExample 验证传统和增强列查询的一致性
 // 确保两种查询方法在扩展功能下产生相同的结果
 func TestExample(t *testing.T) {
-	// Execute both query methods and compare results
+	// Execute both search methods and compare results
 	// 执行两种查询方法并比较结果
 	expected0Text := neatjsons.S(selectFunc0(t, caseDB))
 	expected1Text := neatjsons.S(selectFunc1(t, caseDB))
@@ -87,57 +87,57 @@ func TestExample(t *testing.T) {
 }
 
 // selectFunc0 demonstrates native SQL statement method
-// Baseline implementation using string literals for comparison
+// Baseline implementation using string literals as the reference
 //
 // selectFunc0 演示常规的原生 SQL 查询方法
 // 使用字符串字面量的基准实现用于比较
-func selectFunc0(t *testing.T, db *gorm.DB) []*UserOrder {
-	var results []*UserOrder
-	require.NoError(t, db.Table("users").
-		Select("users.id as user_id, users.name as user_name, orders.id as order_id, orders.amount as order_amount").
-		Joins("left join orders on orders.user_id = users.id").
-		Order("users.id asc, orders.id asc").
+func selectFunc0(t *testing.T, db *gorm.DB) []*AccountPurchase {
+	var results []*AccountPurchase
+	require.NoError(t, db.Table("accounts").
+		Select("accounts.id as account_id, accounts.name as account_name, purchases.id as purchase_id, purchases.amount as purchase_amount").
+		Joins("left join purchases on purchases.account_id = accounts.id").
+		Order("accounts.id asc, purchases.id asc").
 		Scan(&results).Error)
 	t.Log(neatjsons.S(results))
 	return results
 }
 
-type UserOrder struct {
-	UserID      uint
-	UserName    string
-	OrderID     uint
-	OrderAmount float64
+type AccountPurchase struct {
+	AccountID      uint
+	AccountName    string
+	PurchaseID     uint
+	PurchaseAmount float64
 }
 
-// selectFunc1 demonstrates enhanced type-safe column query method
+// selectFunc1 demonstrates the enhanced type-safe column method
 // Advanced implementation with extended column generation features
 //
 // selectFunc1 演示增强的类型安全列查询方法
 // 带有扩展列生成特性的高级实现
-func selectFunc1(t *testing.T, db *gorm.DB) []*UserOrder {
-	// Initialize models and get the decorated columns
+func selectFunc1(t *testing.T, db *gorm.DB) []*AccountPurchase {
+	// Initialize the structs and get the decorated columns
 	// 初始化模型并获取其装饰列
-	user := &models.User{}
-	userColumns := user.TableColumns(gormcnm.NewTableDecoration(user.TableName()))
-	order := &models.Order{}
-	orderColumns := order.TableColumns(gormcnm.NewTableDecoration(order.TableName()))
+	account := &models.Account{}
+	accountColumns := account.TableColumns(gormcnm.NewTableDecoration(account.TableName()))
+	purchase := &models.Purchase{}
+	purchaseColumns := purchase.TableColumns(gormcnm.NewTableDecoration(purchase.TableName()))
 
 	// Define result mapping structure
 	// 定义结果映射结构
-	userOrder := &UserOrder{}
+	accountPurchase := &AccountPurchase{}
 
-	// Build enhanced query with extended column features
+	// Build the enhanced statement with extended column features
 	// 使用扩展列特性构建增强查询
-	var results []*UserOrder
-	require.NoError(t, db.Table(user.TableName()).
+	var results []*AccountPurchase
+	require.NoError(t, db.Table(account.TableName()).
 		Select(gormcnmstub.MergeStmts(
-			userColumns.V主键.AsName(gormcnm.Cnm(userOrder.UserID, "user_id")),
-			userColumns.V名字.AsName(gormcnm.Cnm(userOrder.UserName, "user_name")),
-			orderColumns.V订单主键.AsName(gormcnm.Cnm(userOrder.OrderID, "order_id")),
-			orderColumns.V订单金额.AsName(gormcnm.Cnm(userOrder.OrderAmount, "order_amount")),
+			accountColumns.V主键.AsName(gormcnm.Cnm(accountPurchase.AccountID, "account_id")),
+			accountColumns.V名字.AsName(gormcnm.Cnm(accountPurchase.AccountName, "account_name")),
+			purchaseColumns.V订单主键.AsName(gormcnm.Cnm(accountPurchase.PurchaseID, "purchase_id")),
+			purchaseColumns.V订单金额.AsName(gormcnm.Cnm(accountPurchase.PurchaseAmount, "purchase_amount")),
 		)).
-		Joins(userColumns.LEFTJOIN(order.TableName()).On(orderColumns.V用户主键.OnEq(userColumns.V主键))).
-		Order(userColumns.V主键.Ob("asc").Ob(orderColumns.V订单主键.Ob("asc")).Ox()).
+		Joins(accountColumns.LEFTJOIN(purchase.TableName()).On(purchaseColumns.V用户主键.OnEq(accountColumns.V主键))).
+		Order(accountColumns.V主键.Ob("asc").Ob(purchaseColumns.V订单主键.Ob("asc")).Ox()).
 		Scan(&results).Error)
 	t.Log(neatjsons.S(results))
 	return results

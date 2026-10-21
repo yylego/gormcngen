@@ -1,6 +1,6 @@
-// Package models: Advanced GORM model examples for demo2 application
+// Package models: advanced GORM struct examples of the demo2 application
 // Contains GORM models demonstrating custom table naming and column generation
-// Shows integration with gormcnm for type-safe database operations in clean architecture
+// Shows integration with gormcnm to get type-safe database operations in clean architecture
 //
 // models: demo2 应用程序的高级 GORM 模型示例
 // 包含演示自定义表命名和列生成的 GORM 模型

@@ -7,11 +7,11 @@
 // 用于展示基于自定义标签的列名生成模式
 package models
 
-type SexType string
+type TrackType string
 
 const (
-	Male   SexType = "Male"
-	Female SexType = "Female"
+	Arts    TrackType = "Arts"
+	Science TrackType = "Science"
 )
 
 /*
@@ -19,11 +19,11 @@ const (
 */
 
 type Student struct {
-	ClassCode string  `gorm:"column:class_code" cnm:"V班级编码"`
-	Num       int     `gorm:"column:num;primaryKey;autoIncrement:true" cnm:"V学号"` //塑料英语，正确的是“student ID”
-	Name      string  `gorm:"column:name" cnm:"V名字"`
-	Sex       SexType `gorm:"column:sex" cnm:"V性别"` //塑料英语，正确的是“Gender”
-	BornDate  string  `gorm:"column:age" cnm:"V生日"` //塑料英语，正确的是“Date of Birth”
+	ClassCode string    `gorm:"column:class_code" cnm:"V班级编码"`
+	Num       int       `gorm:"column:num;primaryKey;autoIncrement:true" cnm:"V学号"` //塑料英语，正确的是“student ID”
+	Name      string    `gorm:"column:name" cnm:"V名字"`
+	Track     TrackType `gorm:"column:track" cnm:"V科类"` // 文理科
+	BornDate  string    `gorm:"column:age" cnm:"V生日"`   //塑料英语，正确的是“Date of Birth”
 }
 
 /*
@@ -33,5 +33,5 @@ type Student struct {
 type Class struct {
 	V班级编码 string `gorm:"column:class_code;primaryKey;"`
 	V班级名称 string `gorm:"column:class_name;unique"`
-	V班主任名 string `gorm:"column:main_teacher_name;unique;"`
+	V班主任名 string `gorm:"column:class_head_name;unique;"`
 }

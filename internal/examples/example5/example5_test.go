@@ -1,5 +1,5 @@
 // Package example5 demonstrates column generation with custom method configurations
-// Shows custom method names and multiple model column generation testing
+// Shows custom method names and column generation across two structs
 // Used to showcase configurable column generation options
 //
 // example5 演示自定义方法配置的列生成
@@ -16,7 +16,7 @@ import (
 	"github.com/yylego/neatjson/neatjsons"
 )
 
-// TestExample5 demonstrates column generation with custom receiver names
+// TestExample5 demonstrates column generation with custom method argument names
 // Tests both Person and Example models with gofakeit data generation
 //
 // TestExample5 演示使用自定义接收者名称的列生成
